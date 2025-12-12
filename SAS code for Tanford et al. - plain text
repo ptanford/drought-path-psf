@@ -1,0 +1,245 @@
+CODE FOR BIOMASS (Note, current code is to run “live”. To run just sterile, flip the asterisk (condition = “##” then delete).   
+
+ 
+
+ 
+
+ 
+
+PROC IMPORT OUT= WORK.third 
+
+            DATAFILE= "C:\Users\smangan\Desktop\SASfolder\Philippa\PhilippaGH.xls" 
+
+            DBMS=xls REPLACE; 
+
+     SHEET="DATA"; 
+
+     *GETNAMES=YES; 
+
+     *MIXED=NO; 
+
+     *SCANTEXT=YES;  
+
+     *USEDATE=YES; 
+
+     *SCANTIME=YES; 
+
+RUN; 
+
+data third; 
+
+set third; 
+
+if ID = "106" then delete;*outlier for RGRtotal and RGRabove sterile; 
+
+if ID = "95" then delete;*outlier RGRtotal live; 
+
+if ID = "142" then delete; 
+
+if survival = "0" then delete; 
+
+*if condition = "Live" then delete; 
+
+if condition = "Sterile" then delete; 
+
+*If foliar = "Live" then delete; 
+
+*If water = "Drought" then delete; 
+
+RGRabove = (log(Above)-log(initialshoot_zero))/days; 
+
+RGRtotal = (log(total_biomass) - log(initialtotal_zero))/days; 
+
+logBiomass = log(total_biomass); 
+
+lginitial=log(initialtotal+1); 
+
+ 
+
+Proc print; 
+
+ID RGRtotal RGRabove; 
+
+ 
+
+RUN; 
+
+ 
+
+PROC Mixed ic Method = reml; 
+
+   class  block species condition soil foliar water; 
+
+    Model RGRtotal = species soil foliar water species*soil species*foliar species*water soil*foliar soil*water foliar*water species*soil*foliar species*soil*water soil*foliar*water species*soil*foliar*water/DDFM=SATTERTH SOLUTION; *residual influence;       
+
+ 
+
+lsmeans species; 
+
+lsmeans soil; 
+
+lsmeans foliar; 
+
+lsmeans water; 
+
+lsmeans species*soil; 
+
+lsmeans species*soil*foliar; 
+
+lsmeans species*soil*foliar*water; 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Estimate 'plant-soil feedback' 
+
+species*soil 
+
+1 -1 
+
+-1 1; 
+
+ 
+
+Estimate 'effect of foliar pathogen on plant-soil feedback' 
+
+species*soil*foliar 
+
+1 -1 -1 1 
+
+-1 1 1 -1; 
+
+ 
+
+Estimate 'effect of drought on plant-soil feedback' 
+
+species*soil*water 
+
+1 -1 -1 1 
+
+-1 1 1 -1; 
+
+ 
+
+Estimate 'test' 
+
+ 
+
+species*soil*foliar*water 
+
+ 
+
+1 -1 -1 1 -1 1 1 -1 
+
+-1 1 1 -1 1 -1 -1 1; 
+
+ 
+
+random block; 
+
+ 
+
+ 
+
+ 
+
+Run; 
+
+ 
+
+ 
+
+ 
+
+ 
+
+Code for Survival (Note I ran the full model, and then the main effects only model because none of the interactions were significant). 
+
+ 
+
+PROC IMPORT OUT= WORK.third 
+
+            DATAFILE= "C:\Users\smangan\Desktop\SASfolder\Philippa\PhilippaGH.xls" 
+
+            DBMS=xls REPLACE; 
+
+     SHEET="DATA"; 
+
+     *GETNAMES=YES; 
+
+     *MIXED=NO; 
+
+     *SCANTEXT=YES;  
+
+     *USEDATE=YES; 
+
+     *SCANTIME=YES; 
+
+RUN; 
+
+data third; 
+
+set third; 
+
+if ID = "106" then delete;*outlier for RGRtotal and RGRabove sterile; 
+
+if ID = "95" then delete;*outlier RGRtotal live; 
+
+RGRabove = (log(Above)-log(initialshoot_zero))/days; 
+
+RGRtotal = (log(total_biomass) - log(initialtotal_zero))/days; 
+
+logBiomass = log(total_biomass); 
+
+lginitial=log(initialtotal+1); 
+
+ 
+
+ 
+
+RUN; 
+
+ 
+
+PROC GLIMMIX; 
+
+   class  block species condition soil foliar water; 
+
+     
+
+    *Model survival (event = "1") = condition species soil foliar water condition*species condition*soil condition*foliar condition*water species*soilmspecies*foliar species*water soil*foliar soil*water foliar*water condition*species*soil condition*soil*foliarmcondition*foliar*water species*soil*foliar species*foliar*water condition*species*soil*foliar condition*soil*foliar*water species*soil*foliar*water/ dist=binomial link=logit solution ODDSRATIO;  
+
+    
+
+     Model survival (event = "1") = condition species soil foliar water/ dist=binomial link=logit solution ODDSRATIO;  
+
+     
+
+ 
+
+lsmeans species; 
+
+lsmeans soil; 
+
+lsmeans foliar; 
+
+lsmeans water; 
+
+lsmeans condition; 
+
+ 
+
+random block; 
+
+ 
+
+Run; 
+
+ 
+
+ 
